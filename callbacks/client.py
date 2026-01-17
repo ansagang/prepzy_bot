@@ -52,7 +52,7 @@ async def cancel(query: types.CallbackQuery, state: FSMContext):
     if current_state is None:
         return
     await state.clear()
-    await query.message.answer_photo(photo=types.FSInputFile(path=photo), caption='Отмена тестирования', reply_markup=inline_builder(text='« Меню', callback_data='menu'))
+    await query.message.answer_photo(photo=types.FSInputFile(path=photo), caption='', reply_markup=inline_builder(text='« Menu', callback_data='menu'))
 
 @router.callback_query(F.data == "delete")
 async def delete(query: types.CallbackQuery):

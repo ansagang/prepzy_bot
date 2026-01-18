@@ -1,5 +1,5 @@
 # Byte-compiled / optimized / DLL files
-__pycache__/
+# __pycache__/
 *.py[cod]
 *$py.class
 
@@ -48,7 +48,7 @@ coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
-.pytest_cache/
+# .pytest_cache/
 cover/
 
 # Translations
@@ -160,4 +160,4 @@ cython_debug/
 #.idea/
 .env
 config.py
-**/__pycache__/
+**/__pycache__

@@ -25,13 +25,13 @@ async def info(query: types.CallbackQuery):
             "<b>Commands:</b>\n"
             "\n"
             "<b>How to open menu ❓</b>\n"
-            "-Use command /start or just write Menu in the chat\n"
+            "• Use command /start or just write Menu in the chat\n"
             "\n"
             "<b>Bot information</b>\n"
-            "-Use command /info or just write Info in the chat\n"
+            "• Use command /info or just write Info in the chat\n"
             "\n"
             "<b>How to start practice test ❓</b>\n"
-            "-Use command /practice\n"
+            "• Use command /practice\n"
         ),
         "reply_markup": keyboard.as_markup(),
     }
@@ -57,6 +57,26 @@ async def cancel(query: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "delete")
 async def delete(query: types.CallbackQuery):
     await query.message.delete()
+
+@router.callback_query(F.data == "subjects")
+async def subjects(query: types.CallbackQuery):
+    response = await supabase.get_subjects()
+    subjects = response.data
+    text = []
+    callback = []
+    for subject in subjects:
+        text.append(subject['title'])
+        callback.append('subject_'+subject['slug'])
+    text.append('« Menu')
+    callback.append('menu')
+    pattern = {
+        "caption": (
+            "<b>📚 Subjects</b>\n"
+        ),
+        "reply_markup": inline_builder(text=text, callback_data=callback, sizes=1)
+    }
+    await query.message.edit_caption(**pattern)
+    await query.answer()
 
 # @router.callback_query(F.data == "leaderboard")
 # async def materials(query: types.CallbackQuery):
@@ -186,33 +206,23 @@ async def delete(query: types.CallbackQuery):
 #     await query.message.edit_caption(**pattern)
 #     await query.answer()
 
-# @router.callback_query(F.data.startswith('materials_'))
-# async def materials(query: types.CallbackQuery):
-#     materials = await sqlite.sql_get_materials(query.data.split(sep="_", maxsplit=1)[1])
-#     buttons = []
-#     for material in materials:
-#         buttons.append({'text':material[3], 'callback_data': 'material_'+material[3]})
-#     additional_buttons = [
-#         [
-#             types.InlineKeyboardButton(text='« Назад', callback_data="materials"),
-#         ],
-#     ]
-#     paginator = KeyboardPaginator(
-#         data=buttons,
-#         router=router,
-#         per_page=5,
-#         per_row=1,
-#         additional_buttons=additional_buttons
-#     )
-#     pattern = {
-#         "caption": (
-#             "<b>📚 Материалы</b>\n"
-#             "\n"
-#         ),
-#         "reply_markup": paginator.as_markup()
-#     }
-#     await query.message.edit_caption(**pattern)
-#     await query.answer()
+@router.callback_query(F.data.startswith('subject_'))
+async def subject(query: types.CallbackQuery):
+    response = await supabase.get_subject(query.data.split(sep="_", maxsplit=1)[1])
+    subject = response.data[0]
+    print(response)
+    keyboard = InlineKeyboardBuilder()
+    keyboard.button(text="« Menu", callback_data="subjects")
+    pattern = {
+        "caption": (
+            f"<b>{subject['title']}</b>\n"
+            "\n"
+            f"{subject['description']}"
+        ),
+        "reply_markup": keyboard.as_markup(),
+    }
+    await query.message.edit_caption(**pattern)
+    await query.answer()
 
 # @router.callback_query(F.data.startswith('material_'))
 # async def material(query: types.CallbackQuery):

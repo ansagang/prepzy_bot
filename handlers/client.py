@@ -24,13 +24,13 @@ async def help_cmd(message: types.Message):
         "Commands:\n"
         "\n"
         "<b>How to open menu ❓</b>\n"
-        "-Use command /start or just write Menu in the chat\n"
+        "• Use command /start or just write Menu in the chat\n"
         "\n"
         "<b>Bot information</b>\n"
-        "-Use command /info or just write Info in the chat\n"
+        "• Use command /info or just write Info in the chat\n"
         "\n"
         "<b>How to start practice test ❓</b>\n"
-        "-Use command /practice\n"
+        "• Use command /practice\n"
     )
     await message.bot.send_photo(chat_id=message.from_user.id, photo=types.FSInputFile(path=filename), caption=caption, reply_markup=inline_builder(text='« Назад', callback_data='delete'))
     await message.delete()

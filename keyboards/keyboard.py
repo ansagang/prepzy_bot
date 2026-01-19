@@ -6,11 +6,11 @@ def inlineKb(isAdmin):
     else:
         return client_kb
     
-text_client = ["❓", "Subjects", "📚 Materials", "📄 Mocks", "⚡️ Practice"]
+text_client = ["❓", "📚 Subjects", "📖 Materials", "📄 Mocks", "⚡️ Practice"]
 callback_client = ["help", "subjects", "materials", "mocks", "practice"]
 sizes_client = [1, 2, 2]
 
-text_admin = ["❓", "Subjects", "📚 Materials", "📄 Mocks", "⚡️ Practice", "✅ Add", "❌ Delete"]
+text_admin = ["❓", "📚 Subjects", "📖 Materials", "📄 Mocks", "⚡️ Practice", "✅ Add", "❌ Delete"]
 callback_admin = ["help", "subjects", "materials", "mocks", "practice", "add", "delete_"]
 sizes_admin = [1, 2, 2, 2]
 

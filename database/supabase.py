@@ -8,6 +8,14 @@ supabase: Client = create_client(
     os.getenv('SUPABASE_KEY')
 )
 
+def get_distinct_values(arr):
+    new_arr = []
+    for x in arr:
+        if x not in new_arr:
+            new_arr.append(x)
+
+    return new_arr
+
 async def get_mocks(subject=None):
     if subject is not None:
         response = (
@@ -156,3 +164,165 @@ async def get_material_file(filename):
 #             )
 #     )
 #     return response
+
+async def add_practice(state):
+    data_state = await state.get_data()
+    id_ =  data_state.get('id')
+    answer = data_state.get('answer') 
+    file = data_state.get('file')
+    subject = data_state.get('subject')
+    number = data_state.get('number')
+    title = data_state.get('title')
+    question = data_state.get('question')
+    data = {
+        "answer": answer,
+        "filename": file,
+        "subject": subject,
+        "number": number,
+        "id_": id_,
+        "title": title,
+        "question": question
+    }
+    response = (
+        supabase.table('practices').insert(data).execute()
+    )
+    return response
+
+async def get_practice_id():
+    response = (
+        supabase.table("practices").select("id_").execute()
+    )
+
+    ids = get_distinct_values(response.data)
+    return ids
+
+async def get_practice(id_):
+    practice = (
+        supabase.table("practices").select("*").eq("id_", id_).order("subject").order("number", desc=False).execute()
+    )
+
+    return practice.data[0]
+
+async def delete_practice(id_):
+    response = (
+        supabase.table('practices').delete().eq("id_", id_).execute()
+    )
+    return response
+
+async def add_score(id_: int, practice):
+    data = {
+        "id_": id_,
+        "practice": practice,
+        "username": "",
+        "current_question": 0,
+        "questions_passed": 0,
+        "questions_message": 0,
+        "in_process": 0,
+        "result": 0.0
+    }
+    response = (
+        supabase.table('scores').insert(data).execute()
+    )
+    return response
+
+async def delete_score(id_: int, practice):
+    response = (
+        supabase.table('scores').delete().eq("id_", id_).eq("practice", practice).execute()
+    )
+
+    return response
+
+async def exists(id_: int, practice):
+    response = (
+        supabase.table('scores').select("*").eq("id_", id_).eq("practice", practice).execute()
+    )
+
+    return bool(response.data)
+
+async def set_in_process(id_: int, x: bool, practice):
+    data = {
+        "in_process": 1 if x else 0
+    }
+    response = (
+        supabase.table('scores').update(data).eq("id_", id_).eq("practice", practice).execute()
+    )
+    return response
+
+async def is_in_process(id_: int, practice):
+    practice = (
+        supabase.table("scores").select("in_process").eq("id_", id_).eq("practice", practice).single().execute()
+    )
+
+    return bool(practice.data)
+
+async def get_current_questions(id_: int, practice):
+    practice = (
+        supabase.table("scores").select("current_question").eq("id_", id_).eq("practice", practice).single().execute()
+    )
+
+    return practice.data
+
+async def update_current_question(id_: int, x: int, practice):
+    data = {
+        "current_question": x
+    }
+    response = (
+        supabase.table('scores').update(data).eq("id_", id_).eq("practice", practice).execute()
+    )
+    return response
+
+async def update_questions_passed(id_: int, x: int, practice):
+    data = {
+        "questions_passed": x
+    }
+    response = (
+        supabase.table('scores').update(data).eq("id_", id_).eq("practice", practice).execute()
+    )
+    return response
+
+async def get_questions_passed(id_: int, practice):
+    practice = (
+        supabase.table("scores").select("questions_passed").eq("id_", id_).eq("practice", practice).single().execute()
+    )
+
+    return practice.data
+
+async def get_questions_message(id_: int, practice):
+    practice = (
+        supabase.table("scores").select("questions_message").eq("id_", id_).eq("practice", practice).single().execute()
+    )
+
+    return practice.data
+
+async def update_questions_message(id_: int, x: int, practice):
+    data = {
+        "questions_message": x
+    }
+    response = (
+        supabase.table('scores').update(data).eq("id_", id_).eq("practice", practice).execute()
+    )
+    return response
+
+async def change_score(id_:int, practice, result, username):
+    data = {
+        "result": result,
+        "username": username
+    }
+    response = (
+        supabase.table('scores').update(data).eq("id_", id_).eq("practice", practice).execute()
+    )
+    return response
+
+async def get_score(id_:int, practice):
+    score = (
+        supabase.table("scores").select("*").eq("id_", id_).eq("practice", practice).single().execute()
+    )
+
+    return score.data
+
+async def get_leaderboard(practice):
+    response = (
+        supabase.table("scores").select("*").eq("practice", practice).order("result", desc=True).execute()
+    )
+
+    return response.data

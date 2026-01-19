@@ -32,6 +32,21 @@ class FMSmocks(StatesGroup):
     subject = State()
     title = State()
 
+class FMSpractice(StatesGroup):
+    id = State()
+    file = State()
+    subject = State()
+    answer = State()
+    number = State()
+    title = State()
+    question = State()
+
+class FMSquestion(StatesGroup):
+    file = State()
+    answer = State()
+    subject = State()
+    title = State()
+    explanation = State()
 
 @router.callback_query(and_f(F.data == "add", IsAdmin()))
 async def add(query: types.CallbackQuery):
@@ -58,6 +73,12 @@ async def add_mock_subject(query: types.CallbackQuery, state: FSMContext):
     await query.message.answer('Send the file', reply_markup=inline_builder(text='« Cancel', callback_data='cancel'))
     await state.set_state(FMSmocks.file)
 
+@router.callback_query(and_f(IsAdmin(), FMSpractice.subject, F.data.startswith('add_practice-')))
+async def add_practice_subject(query: types.CallbackQuery, state: FSMContext):
+    await state.update_data(subject=query.data.split(sep="-", maxsplit=1)[1])
+    await query.message.answer('Send the photo', reply_markup=inline_builder(text='« Cancel', callback_data='cancel'))
+    await state.set_state(FMSpractice.file)
+
 @router.callback_query(and_f(IsAdmin(), F.data.startswith('add')))
 async def add_subject(query: types.CallbackQuery, state: FSMContext):
     if query.data == 'add_subject':
@@ -74,7 +95,7 @@ async def add_subject(query: types.CallbackQuery, state: FSMContext):
         text.append('« Menu')
         callback.append('add')
         pattern = {
-            "text": (
+            "caption": (
                 "<b>Choose subject</b>\n"
             ),
             "reply_markup": inline_builder(text=text, callback_data=callback, sizes=1)
@@ -93,7 +114,7 @@ async def add_subject(query: types.CallbackQuery, state: FSMContext):
         text.append('« Menu')
         callback.append('add')
         pattern = {
-            "text": (
+            "caption": (
                 "<b>Choose subject</b>\n"
             ),
             "reply_markup": inline_builder(text=text, callback_data=callback, sizes=1)
@@ -101,6 +122,25 @@ async def add_subject(query: types.CallbackQuery, state: FSMContext):
         await query.message.edit_caption(**pattern)
         await query.answer()
         await state.set_state(FMSmocks.subject)
+    if query.data == 'add_practice':
+        response = await supabase.get_subjects()
+        subjects = response.data
+        text = []
+        callback = []
+        for subject in subjects:
+            text.append(subject['title'])
+            callback.append('add_practice-'+subject['slug'])
+        text.append('« Menu')
+        callback.append('add')
+        pattern = {
+            "caption": (
+                "<b>Choose subject</b>\n"
+            ),
+            "reply_markup": inline_builder(text=text, callback_data=callback, sizes=1)
+        }
+        await query.message.edit_caption(**pattern)
+        await query.answer()
+        await state.set_state(FMSpractice.subject)
 
 @router.message(and_f(IsAdmin(), F.content_type == 'document', FMSmocks.file))
 async def add_mock_file(message: types.Message, state: FSMContext):
@@ -116,6 +156,51 @@ async def add_mock_title(message: types.Message, state: FSMContext):
     await supabase.add_mock(state)
     await state.clear()
     await message.answer_photo(photo=types.FSInputFile(path=photo), caption='Mock has been added successfully', reply_markup=inline_builder(text='« Menu', callback_data='menu'))
+
+@router.message(and_f(IsAdmin(), F.content_type == 'photo', FMSpractice.file))
+async def add_practice_photo(message: types.Message, state: FSMContext):
+    await state.update_data(file=message.photo[0].file_id)
+    # await supabase.add_material_file(message.photo[0], message.photo[0].file_unique_id)
+    await message.answer('Enter the title', reply_markup=inline_builder(text='« Cancel', callback_data='cancel'))
+    await state.set_state(FMSpractice.title)
+
+@router.message(and_f(IsAdmin(), F.content_type == 'text', FMSpractice.title))
+async def add_practice_title(message: types.Message, state: FSMContext):
+    await state.update_data(title=message.text)
+    # await supabase.add_material_file(message.photo[0], message.photo[0].file_unique_id)
+    await message.answer('Choose the answer', reply_markup=inline_builder(text='« Cancel', callback_data='cancel'))
+    await state.set_state(FMSpractice.answer)
+
+@router.message(and_f(IsAdmin(), F.content_type == 'text', FMSpractice.answer))
+async def add_practice_answer(message: types.Message, state: FSMContext):
+    answer = 0
+    if message.text == 'A':
+        answer = 0
+    elif message.text == 'B':
+        answer = 1
+    elif message.text == 'C':
+        answer = 2
+    elif message.text == 'D':
+        answer = 3
+    await state.update_data(answer=answer)
+    # await supabase.add_material_file(message.photo[0], message.photo[0].file_unique_id)
+    await message.answer('Choose the number of question', reply_markup=inline_builder(text='« Cancel', callback_data='cancel'))
+    await state.set_state(FMSpractice.number)
+
+@router.message(and_f(IsAdmin(), F.content_type == 'text', FMSpractice.number))
+async def add_practice_number(message: types.Message, state: FSMContext):
+    await state.update_data(number=message.text)
+    # await supabase.add_material_file(message.photo[0], message.photo[0].file_unique_id)
+    await message.answer('Enter the id of practice', reply_markup=inline_builder(text='« Cancel', callback_data='cancel'))
+    await state.set_state(FMSpractice.id)
+
+@router.message(and_f(IsAdmin(), F.content_type == 'text', FMSpractice.id))
+async def add_practice_id(message: types.Message, state: FSMContext):
+    photo = get_project_root('assets/logo.png')
+    await state.update_data(id=message.text)
+    await supabase.add_practice(state)
+    await state.clear()
+    await message.answer_photo(photo=types.FSInputFile(path=photo), caption='Practice has been added successfully', reply_markup=inline_builder(text='« Menu', callback_data='menu'))
 
 @router.message(and_f(IsAdmin(), F.content_type == 'photo', FMSmaterials.file))
 async def add_material_photo(message: types.Message, state: FSMContext):
@@ -206,6 +291,47 @@ async def delete_mock(query: types.CallbackQuery):
         "<b>📄 Mock has been deleted successfully</b>"
     )
     await query.message.edit_caption(caption=caption, reply_markup=inline_builder(text=['« Menu'], callback_data=['delete_mock']))
+
+@router.callback_query(and_f(IsAdmin(), F.data.startswith('delete_practices-')))
+async def delete_practices(query: types.CallbackQuery):
+    pattern = {}
+    ids = await supabase.get_practice_id()
+    res1 = await supabase.get_subject(query.data.split(sep='-', maxsplit=1)[1])
+    subject =res1.data[0]
+    buttons = []
+    pattern['caption'] = (
+        "<b>❌ Delete material</b>\n"
+        "\n"
+        "Choose practice to delete"
+    )
+    buttons = []
+    for id in ids:
+        practice = await supabase.get_practice(id['id_'])
+        buttons.append({'text':practice['id_']+' - '+subject['title'], 'callback_data':'delete_practice-'+str(id['id_'])})
+    additional_buttons = [
+        [
+            types.InlineKeyboardButton(text='« Menu', callback_data="delete_"),
+        ],
+    ]
+    paginator = KeyboardPaginator(
+        data=buttons,
+        router=router,
+        per_page=5,
+        per_row=1,
+        additional_buttons=additional_buttons
+    )
+    pattern['reply_markup'] = paginator.as_markup()
+    await query.message.edit_caption(**pattern)
+    await query.answer()
+
+@router.callback_query(and_f(IsAdmin(), F.data.startswith('delete_practice-')))
+async def delete_practice(query: types.CallbackQuery):
+    await supabase.delete_practice(query.data.split(sep='-', maxsplit=1)[1])
+    caption = (
+        "<b>⚡️ Practice has been deleted successfully</b>"
+    )
+    await query.message.edit_caption(caption=caption, reply_markup=inline_builder(text=['« Menu'], callback_data=['delete_practice']))
+    await query.answer()
 
 @router.callback_query(and_f(IsAdmin(), F.data.startswith('delete_materials-')))
 async def delete_materials(query: types.CallbackQuery):
@@ -315,6 +441,33 @@ async def delete_data(query: types.CallbackQuery):
         buttons = []
         for subject in subjects:
             buttons.append({'text':subject['title'], 'callback_data':'delete_mocks-'+str(subject['slug'])})
+        additional_buttons = [
+            [
+                types.InlineKeyboardButton(text='« Menu', callback_data="delete_"),
+            ],
+        ]
+        paginator = KeyboardPaginator(
+            data=buttons,
+            router=router,
+            per_page=5,
+            per_row=1,
+            additional_buttons=additional_buttons
+        )
+        pattern['reply_markup'] = paginator.as_markup()
+        await query.message.edit_caption(**pattern)
+        await query.answer()
+    if query.data == 'delete_practice':
+        response = await supabase.get_subjects()
+        subjects = response.data
+        buttons = []
+        pattern['caption'] = (
+            "<b>❌ Delete mock</b>\n"
+            "\n"
+            "Choose subject to delete practice from"
+        )
+        buttons = []
+        for subject in subjects:
+            buttons.append({'text':subject['title'], 'callback_data':'delete_practices-'+str(subject['slug'])})
         additional_buttons = [
             [
                 types.InlineKeyboardButton(text='« Menu', callback_data="delete_"),

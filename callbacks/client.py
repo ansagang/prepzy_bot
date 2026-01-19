@@ -223,7 +223,6 @@ async def material(query: types.CallbackQuery):
 async def subject(query: types.CallbackQuery):
     response = await supabase.get_subject(query.data.split(sep="_", maxsplit=1)[1])
     subject = response.data[0]
-    print(response)
     keyboard = InlineKeyboardBuilder()
     keyboard.button(text="« Menu", callback_data="subjects")
     pattern = {

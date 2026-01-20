@@ -16,6 +16,18 @@ def get_distinct_values(arr):
 
     return new_arr
 
+def distinct_by(rows, key):
+    seen = set()
+    result = []
+
+    for row in rows:
+        value = row[key]
+        if value not in seen:
+            seen.add(value)
+            result.append(row)
+
+    return result
+
 async def get_mocks(subject=None):
     if subject is not None:
         response = (
@@ -167,7 +179,7 @@ async def get_material_file(filename):
 
 async def add_practice(state):
     data_state = await state.get_data()
-    id_ =  data_state.get('id')
+    slug =  data_state.get('slug')
     answer = data_state.get('answer') 
     file = data_state.get('file')
     subject = data_state.get('subject')
@@ -179,7 +191,7 @@ async def add_practice(state):
         "filename": file,
         "subject": subject,
         "number": number,
-        "id_": id_,
+        "slug": slug,
         "title": title,
         "question": question
     }
@@ -188,24 +200,41 @@ async def add_practice(state):
     )
     return response
 
-async def get_practice_id():
+async def get_practice_slug():
     response = (
-        supabase.table("practices").select("id_").execute()
+        supabase.table("practices").select("slug").execute()
     )
 
-    ids = get_distinct_values(response.data)
-    return ids
+    slugs = get_distinct_values(response.data)
+    return slugs
 
-async def get_practice(id_):
+async def get_practices(subject):
+    practices = (
+        supabase.table("practices").select("*").eq("subject", subject).execute()
+    )
+
+    return distinct_by(practices.data, "slug")
+
+async def get_practice(slug):
     practice = (
-        supabase.table("practices").select("*").eq("id_", id_).order("subject").order("number", desc=False).execute()
+        supabase.table("practices").select("*").eq("slug", slug).order("subject").order("number", desc=False).execute()
     )
 
-    return practice.data[0]
+    if len(practice.data) > 0:
+        return practice.data[-1]
+    else:
+        return []
+    
+async def get_practices_full(slug):
+    practice = (
+        supabase.table("practices").select("*").eq("slug", slug).order("subject").order("number", desc=False).execute()
+    )
 
-async def delete_practice(id_):
+    return practice.data
+
+async def delete_practice(slug):
     response = (
-        supabase.table('practices').delete().eq("id_", id_).execute()
+        supabase.table('practices').delete().eq("slug", slug).execute()
     )
     return response
 
@@ -218,7 +247,7 @@ async def add_score(id_: int, practice):
         "questions_passed": 0,
         "questions_message": 0,
         "in_process": 0,
-        "result": 0.0
+        "result": "0"
     }
     response = (
         supabase.table('scores').insert(data).execute()
@@ -241,7 +270,7 @@ async def exists(id_: int, practice):
 
 async def set_in_process(id_: int, x: bool, practice):
     data = {
-        "in_process": 1 if x else 0
+        "in_process": x
     }
     response = (
         supabase.table('scores').update(data).eq("id_", id_).eq("practice", practice).execute()
@@ -250,10 +279,9 @@ async def set_in_process(id_: int, x: bool, practice):
 
 async def is_in_process(id_: int, practice):
     practice = (
-        supabase.table("scores").select("in_process").eq("id_", id_).eq("practice", practice).single().execute()
+        supabase.table("scores").select("").eq("id_", id_).eq("practice", practice).single().execute()
     )
-
-    return bool(practice.data)
+    return practice.data['in_process']
 
 async def get_current_questions(id_: int, practice):
     practice = (

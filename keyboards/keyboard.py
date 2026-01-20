@@ -11,7 +11,7 @@ callback_client = ["help", "subjects", "materials", "mocks", "practice"]
 sizes_client = [1, 2, 2]
 
 text_admin = ["❓", "📚 Subjects", "📖 Materials", "📄 Mocks", "⚡️ Practice", "✅ Add", "❌ Delete"]
-callback_admin = ["help", "subjects", "materials", "mocks", "practice", "add", "delete_"]
+callback_admin = ["help", "subjects", "materials", "mocks", "practices", "add", "delete_"]
 sizes_admin = [1, 2, 2, 2]
 
 client_kb = inline_builder(text=text_client, callback_data=callback_client, sizes=sizes_client)

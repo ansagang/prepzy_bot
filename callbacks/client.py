@@ -200,6 +200,55 @@ async def materialsSubject(query: types.CallbackQuery):
     await query.message.edit_caption(**pattern)
     await query.answer()
 
+@router.callback_query(F.data == "practices")
+async def practices(query: types.CallbackQuery):
+    response = await supabase.get_subjects()
+    subjects = response.data
+    text = []
+    callback = []
+    for subject in subjects:
+        text.append(subject['title'])
+        callback.append('practices_'+subject['slug'])
+    text.append('« Menu')
+    callback.append('menu')
+    pattern = {
+        "caption": (
+            "<b>⚡️ Practices</b>\n"
+            "\n"
+            "Choose subject to get practices for"
+        ),
+        "reply_markup": inline_builder(text=text, callback_data=callback, sizes=1)
+    }
+    await query.message.edit_caption(**pattern)
+    await query.answer()
+
+@router.callback_query(F.data.startswith('practices_'))
+async def practicesSubject(query: types.CallbackQuery):
+    practices = await supabase.get_practices(query.data.split(sep="_", maxsplit=1)[1])
+    buttons = []
+    for practice in practices:
+        buttons.append({'text':practice['title'], 'callback_data': 'practice_'+str(practice['slug'])})
+    additional_buttons = [
+        [
+            types.InlineKeyboardButton(text='« Menu', callback_data="practices"),
+        ],
+    ]
+    paginator = KeyboardPaginator(
+        data=buttons,
+        router=router,
+        per_page=5,
+        per_row=1,
+        additional_buttons=additional_buttons
+    )
+    pattern = {
+        "caption": (
+            "<b>⚡️ Practices</b>\n"
+        ),
+        "reply_markup": paginator.as_markup()
+    }
+    await query.message.edit_caption(**pattern)
+    await query.answer()
+
 @router.callback_query(F.data.startswith('material_'))
 async def material(query: types.CallbackQuery):
     res1 = await supabase.get_material(query.data.split(sep="_", maxsplit=1)[1])

@@ -87,7 +87,9 @@ async def add_question(query: types.CallbackQuery, state: FSMContext):
 @router.message(and_f(IsAdmin(), FMSpractice.title))
 async def add_practice(message: types.Message, state: FSMContext):
     await state.update_data(title=message.text)
-    await state.update_data(slug=slugify(message.text))
+    data_state = await state.get_data()
+    subject = data_state.get('subject')
+    await state.update_data(slug=slugify(message.text)+'_'+subject)
     await state.update_data(number=1)
     # await state.update_data(slug=slugify(query.data.split(sep="-", maxsplit=1)[1]))
     # await supabase.add_material_file(message.photo[0], message.photo[0].file_unique_id)
@@ -341,9 +343,10 @@ async def delete_mock(query: types.CallbackQuery):
 @router.callback_query(and_f(IsAdmin(), F.data.startswith('delete_practices-')))
 async def delete_practices(query: types.CallbackQuery):
     pattern = {}
-    slugs = await supabase.get_practice_slug()
+    # slugs = await supabase.get_practice_slug()
     res1 = await supabase.get_subject(query.data.split(sep='-', maxsplit=1)[1])
     subject =res1.data[0]
+    slugs = await supabase.get_practices(query.data.split(sep='-', maxsplit=1)[1])
     buttons = []
     pattern['caption'] = (
         "<b>❌ Delete practice</b>\n"

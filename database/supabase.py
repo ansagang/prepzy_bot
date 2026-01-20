@@ -206,6 +206,7 @@ async def get_practice_slug():
     )
 
     slugs = get_distinct_values(response.data)
+    print(slugs)
     return slugs
 
 async def get_practices(subject):
@@ -341,16 +342,9 @@ async def change_score(id_:int, practice, result, username):
     )
     return response
 
-async def get_score(id_:int, practice):
-    score = (
-        supabase.table("scores").select("*").eq("id_", id_).eq("practice", practice).single().execute()
-    )
-
-    return score.data
-
-async def get_leaderboard(practice):
+async def get_leaderboard(username):
     response = (
-        supabase.table("scores").select("*").eq("practice", practice).order("result", desc=True).execute()
+        supabase.table("scores").select("*").eq("username", username).order("result", desc=True).execute()
     )
 
     return response.data

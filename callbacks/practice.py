@@ -39,16 +39,21 @@ def compose_markup(question: int, slug):
         "a": 4,
         "slug": slug
     }
-    km = inline_builder(text=['A', 'B', 'C', 'D', 'Stop practice'], callback_data=[dumps(cd1), dumps(cd2), dumps(cd3), dumps(cd4), 'stop_'+slug], sizes=[4, 1])
+    km = inline_builder(text=['A', 'B', 'C', 'D', 'Stop practice', "« Menu"], callback_data=[dumps(cd1), dumps(cd2), dumps(cd3), dumps(cd4), 'stop_'+slug, 'cancel-practice_'+slug], sizes=[4, 1, 1])
     
     return km
-
 
 async def reset(id_: int, practice):
     await supabase.set_in_process(id_, False, practice)
     await supabase.update_questions_passed(id_, 0, practice)
     await supabase.update_questions_message(id_, 0, practice)
     await supabase.update_current_question(id_, 0, practice)
+
+@router.callback_query(F.data.startswith("cancel-practice_"))
+async def cancel_practice(query: types.CallbackQuery):
+    slug = query.data.split(sep="_", maxsplit=1)[1]
+    await supabase.set_in_process(query.from_user.id, False, slug)
+    await query.message.delete()
 
 @router.callback_query(F.data.startswith('practice_'))
 async def go_handler(query: types.CallbackQuery):
@@ -78,8 +83,6 @@ async def quit(query):
     passed = await supabase.get_questions_passed(query.from_user.id, slug)
     practice = await supabase.get_practices_full(slug)
     if not await supabase.is_in_process(query.from_user.id, slug):
-
-        # await query.bot.send_message(query.from_user.id, "You ❗️Вы еще не начали тест\\.", parse_mode="MarkdownV2")
         return
     user = query.from_user.username
     result = str(passed['questions_passed']) + "/" + str(len(practice))
@@ -114,7 +117,6 @@ async def quit_handler(query: types.CallbackQuery):
 async def tests(query: types.CallbackQuery):
     data = loads(query.data)
     q = data.get('q')
-    # some code uses 'slug' key while others might use 'id' - be flexible
     slug = data.get('slug')
     practice = await supabase.get_practices_full(slug)
     is_correct = int(practice[q]['answer']) == data['a']
@@ -149,7 +151,6 @@ async def tests(query: types.CallbackQuery):
         message_id=msg['questions_message'],
         reply_markup=compose_markup(q + 1, slug),
     )
-    # Use HTML parse mode since captions above use HTML tags elsewhere
     await query.bot.edit_message_caption(
         caption=f"{practice[q+1]['question']}",
         chat_id=query.from_user.id,

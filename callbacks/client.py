@@ -180,11 +180,31 @@ async def scores(query: types.CallbackQuery):
     caption = ""
     if scores:
         caption += "<b>🏆 Your Scores:</b>\n\n"
-        for idx, score in enumerate(scores, start=1):
-            res = await supabase.get_subject(score['practice'].split(sep="_", maxsplit=1)[1])
-            subject = res.data[0]
-            practice = await supabase.get_practice(score['practice'])
-            caption += f"{idx}. {practice['title']} {subject['title']}: {score['result']}\n"
+        # Group practices by subject title
+        grouped: dict[str, list[tuple[str, str]]] = {}
+        for score in scores:
+            practice_slug = score.get('practice')
+            # try to extract subject slug from practice identifier
+            subj_slug = None
+            if isinstance(practice_slug, str) and "_" in practice_slug:
+                subj_slug = practice_slug.split(sep="_", maxsplit=1)[1]
+
+            subject_title = "Unknown Subject"
+            if subj_slug:
+                res = await supabase.get_subject(subj_slug)
+                if getattr(res, 'data', None):
+                    subject_title = res.data[0].get('title', subject_title)
+
+            practice = await supabase.get_practice(practice_slug)
+            practice_title = practice.get('title') if isinstance(practice, dict) else str(practice)
+            grouped.setdefault(subject_title, []).append((practice_title, score.get('result', '0')))
+
+        # Build caption: subject heading then its practices
+        for subject, items in grouped.items():
+            caption += f"<b>📚 {subject}</b>\n"
+            for pr_title, res in items:
+                caption += f"• {pr_title}: {res}\n"
+            caption += "\n"
     else:
         caption += "<b>🏆 You have no scores yet.</b>\n\n"
     text = []
@@ -197,34 +217,6 @@ async def scores(query: types.CallbackQuery):
     pattern = {
         "caption": caption,
         "reply_markup": inline_builder(text=text, callback_data=callback, sizes=1)
-    }
-    await query.message.edit_caption(**pattern)
-    await query.answer()
-
-@router.callback_query(F.data.startswith('scores_'))
-async def scoresSubject(query: types.CallbackQuery):
-    response = await supabase.get_score(query.data.split(sep="_", maxsplit=1)[1])
-    scores = response.data
-    buttons = []
-    for score in scores:
-        buttons.append({'text':material['title'], 'callback_data': 'material_'+str(material['id'])})
-    additional_buttons = [
-        [
-            types.InlineKeyboardButton(text='« Menu', callback_data="materials"),
-        ],
-    ]
-    paginator = KeyboardPaginator(
-        data=buttons,
-        router=router,
-        per_page=5,
-        per_row=1,
-        additional_buttons=additional_buttons
-    )
-    pattern = {
-        "caption": (
-            "<b>📖 Materials</b>\n"
-        ),
-        "reply_markup": paginator.as_markup()
     }
     await query.message.edit_caption(**pattern)
     await query.answer()
